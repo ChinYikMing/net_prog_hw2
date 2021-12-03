@@ -376,6 +376,14 @@ _Bool req_parser(char *cmd, int initiator_fd){
 
         return true;
     } else if((ptr = strstr(cmd, "play "))){
+        // check if the initiator has join a game
+        OXGame *game = get_game_by_sockfd(initiator_fd);
+        if(!game){
+            const char err_msg[] = "you did not join any game!(enter 'lsnoti' to list all notification or 'invgamer' to invite a gamer)\n";
+            send(initiator_fd, err_msg, strlen(err_msg), 0);
+            return true;
+        }
+
         ptr += 5;
         char action[8] = {0};
         char *newline = strchr(ptr, '\n');
