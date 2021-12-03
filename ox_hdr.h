@@ -15,6 +15,8 @@ typedef struct ox_game {
     int turn;            // always start from initiator
     int left_step;
     int status;
+    int watchers[1024];
+    int watchers_idx;
     int gamer_fd[2];
     char gamer_label[2]; // initiator always is 'o', peer always is 'x'
 } OXGame;
@@ -30,6 +32,7 @@ typedef struct ox_gamer {
 OXGamer *create_oxgamer(char *name, int sockfd);
 OXGame *create_oxgame(int sockfd1, int sockfd2);
 OXNoti *create_oxnoti(char *initiator_name, int initiator_fd);
+void draw_oxboard_to_watcher(int sockfd, OXGame *oxgame);
 void draw_oxboard(int sockfd, int msg_cnt, ...); // one of the fd of the gamer
 _Bool update_oxboard(int sockfd, int action); // one of the fd of the gamer
 _Bool is_win(OXGame *ox_game);

@@ -45,6 +45,8 @@ OXGame *create_oxgame(int sockfd1, int sockfd2){
     new_game->gamer_fd[1] = sockfd2;
     new_game->gamer_label[0] = 'o';
     new_game->gamer_label[1] = 'x';
+    new_game->watchers_idx = 0;
+    memset(new_game->watchers, -1, sizeof(int[1024]));
 
     return new_game;
 }

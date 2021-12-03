@@ -285,9 +285,17 @@ _Bool req_parser(char *cmd, int initiator_fd){
                 gamer_name = get_name_by_sockfd(game->gamer_fd[1]);
                 strcat(buf, gamer_name);
                 sprintf(id_buf, "%d", game->gamer_fd[1]);
+                strcat(buf, "@");
                 strcat(buf, id_buf);
-                strcat(buf, "\n");
+                strcat(buf, " ");
                 free(gamer_name);
+
+                char game_id[8];
+                sprintf(game_id, "%d", game->id);
+                strcat(buf, "[game_id: ");
+                strcat(buf, game_id);
+                strcat(buf, "]");
+                strcat(buf, "\n");
             }
         }
 
@@ -329,9 +337,27 @@ _Bool req_parser(char *cmd, int initiator_fd){
 
         send(initiator_fd, buf, strlen(buf), 0);
         return true;
-    } else if((ptr = strstr(cmd, "watchgame"))){
-        // check game is exists
+    } else if((ptr = strstr(cmd, "watchgame "))){
+        ptr += 10;
+        char game_id_buf[8] = {0};
+        char *newline = strchr(ptr, '\n');
+        snprintf(game_id_buf, newline - ptr + 1, "%s", ptr);
+        int game_id = atoi(game_id_buf);
 
+        // check game if exists
+        OXGame *game = get_game_by_sockfd(game_id);
+        if(!game){
+            const char err_msg[] = "no such games!(enter 'lsgames' to list all running games)\n";
+            send(initiator_fd, err_msg, strlen(err_msg), 0);
+            return true;
+        }
+
+        game->watchers[game->watchers_idx++] = initiator_fd;
+
+        // draw ox_board to initiator
+        draw_oxboard_to_watcher(initiator_fd, game);        
+
+        return true;
     } else if((ptr = strstr(cmd, "exitgame"))){
 
         // delete the game if the gamer is in the game, also the gamer then notify the peer
@@ -343,10 +369,21 @@ _Bool req_parser(char *cmd, int initiator_fd){
             else
                 peer_fd = game->gamer_fd[0];
 
+            send(peer_fd, "Peer has exit the game!\n", strlen("Peer has exit the game!\n"), 0);
+
+            if(game->watchers_idx > 0){
+                char exit_msg[128];
+                if(initiator_fd == game->gamer_fd[0])
+                    strcpy(exit_msg, "'o' side has exit the game\n");
+                else
+                    strcpy(exit_msg, "'x' side has exit the game\n");
+
+                for(int i = 0; i < game->watchers_idx; ++i)
+                    send(game->watchers[i], exit_msg, strlen(exit_msg), 0);
+            }
+
             del_game(game);
             del_gamer(initiator_fd);
-
-            send(peer_fd, "Peer has exit the game!\n", strlen("Peer has exit the game!\n"), 0);
         } 
 
         send(initiator_fd, "exitg", 5, 0);
@@ -566,6 +603,7 @@ void draw_oxboard(int sockfd, int msg_cnt, ...){
 
     char buf[1024] = {0};
     char turn_buf[1024] = {0};
+    char watch_buf[1024] = {0};
 
     sprintf(buf, "\n%c|%c|%c\n------\n%c|%c|%c\n------\n%c|%c|%c\n"
         "Waiting for peer's action...\n",
@@ -579,6 +617,11 @@ void draw_oxboard(int sockfd, int msg_cnt, ...){
         oxgame->board[1][0],oxgame->board[1][1],oxgame->board[1][2],
         oxgame->board[2][0],oxgame->board[2][1],oxgame->board[2][2]);
 
+    sprintf(watch_buf, "\n%c|%c|%c\n------\n%c|%c|%c\n------\n%c|%c|%c\n",
+        oxgame->board[0][0],oxgame->board[0][1],oxgame->board[0][2],
+        oxgame->board[1][0],oxgame->board[1][1],oxgame->board[1][2],
+        oxgame->board[2][0],oxgame->board[2][1],oxgame->board[2][2]);
+
     if(msg_cnt){
         for(int i = 0; i < msg_cnt; ++i){
             va_list args;
@@ -588,19 +631,38 @@ void draw_oxboard(int sockfd, int msg_cnt, ...){
                 if(strstr(msg , "winner")){ // has winner
                     strcat(turn_buf, "You are LOSE!\n");
                     strcat(buf, "You are WIN!\n");
+                    if(oxgame->turn == oxgame->gamer_fd[0])
+                        strcat(watch_buf, "'x' is the winner\n");
+                    else
+                        strcat(watch_buf, "'o' is the winner\n");
                 } else if(strstr(msg, "draw")){ // draw
                     strcat(turn_buf, "The game is DRAW!\n");
                     strcat(buf, "The game is DRAW!\n");
+                    strcat(watch_buf, "The game is DRAW!\n");
                 } else if(strstr(msg, "invalid")){ // invalid action
-                    // printf("%s\n", va_arg(args, char *));
-                    printf("turn: %d\n", oxgame->turn);
-                    strcat(turn_buf, "invalid action, please try another one");
-                    strcat(turn_buf, "\n");
+                    strcat(turn_buf, "invalid action, please try another one\n");
+                    strcat(buf, "peer choose an invalid action, please be patient\n");
+                    if(oxgame->turn == oxgame->gamer_fd[0])
+                        strcat(watch_buf, "'o' side choose an invalid action\n");
+                    else
+                        strcat(watch_buf, "'x' side choose an invalid action\n");
                 }
             }
             va_end(args);
         }
-    }    
+    }
+
+    if(oxgame->watchers_idx > 0){
+        if(!msg_cnt){
+            if(oxgame->turn == oxgame->gamer_fd[0])
+                strcat(watch_buf, "The turn is 'o'\n");
+            else
+                strcat(watch_buf, "The turn is 'x'\n");
+        }
+
+        for(int i = 0; i < oxgame->watchers_idx; ++i)
+            send(oxgame->watchers[i], watch_buf, strlen(watch_buf), 0);
+    }
 
     if(oxgame->turn == oxgame->gamer_fd[0]){
         send(oxgame->gamer_fd[0], turn_buf, strlen(turn_buf), 0);
@@ -804,4 +866,21 @@ OXNoti *get_noti_by_sockfd(int sockfd, int inv_fd){
     }
 
     return NULL;
+}
+
+void draw_oxboard_to_watcher(int sockfd, OXGame *oxgame){
+    char buf[1024] = {0};
+
+    sprintf(buf, "\n%c|%c|%c\n------\n%c|%c|%c\n------\n%c|%c|%c\n",
+        oxgame->board[0][0],oxgame->board[0][1],oxgame->board[0][2],
+        oxgame->board[1][0],oxgame->board[1][1],oxgame->board[1][2],
+        oxgame->board[2][0],oxgame->board[2][1],oxgame->board[2][2]);
+
+    if(oxgame->turn == oxgame->gamer_fd[0])
+        strcat(buf, "The turn is 'o'\n");
+    else
+        strcat(buf, "The turn is 'x'\n");
+
+    send(sockfd, buf, strlen(buf), 0);
+    return;
 }
