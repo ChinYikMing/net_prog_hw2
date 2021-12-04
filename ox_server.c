@@ -389,6 +389,36 @@ _Bool req_parser(char *cmd, int initiator_fd){
         send(initiator_fd, "exitg", 5, 0);
 
         return false;
+    } else if((ptr = strstr(cmd, "logout"))){
+
+        OXGame *game = get_game_by_sockfd(initiator_fd);
+        if(game){
+            int peer_fd;
+            if(game->gamer_fd[0] == initiator_fd)
+                peer_fd = game->gamer_fd[1];
+            else
+                peer_fd = game->gamer_fd[0];
+
+            send(peer_fd, "Peer has exit the game!\n", strlen("Peer has exit the game!\n"), 0);
+
+            if(game->watchers_idx > 0){
+                char exit_msg[128];
+                if(initiator_fd == game->gamer_fd[0])
+                    strcpy(exit_msg, "'o' side has exit the game\n");
+                else
+                    strcpy(exit_msg, "'x' side has exit the game\n");
+
+                for(int i = 0; i < game->watchers_idx; ++i)
+                    send(game->watchers[i], exit_msg, strlen(exit_msg), 0);
+            }
+
+            del_game(game);
+        } 
+
+        del_gamer(initiator_fd);
+        send(initiator_fd, "logout", 6, 0);
+
+        return false;
     } else if((ptr = strstr(cmd, "invgamer "))){
         ptr += 9;
         char tgt_fd_buf[8] = {0};

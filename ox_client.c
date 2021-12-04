@@ -31,7 +31,9 @@ static void usage(){
     printf("lsnoti\n");
     printf("    -to show all notification\n");
     printf("exitgame\n");
-    printf("    -leave the current game\n");
+    printf("    -leave the game\n");
+    printf("logout\n");
+    printf("    -logout current gamer\n");
     printf("watchgame <game ID>\n");
     printf("    -to watch a specific game\n");
     printf("invgamer <gamer ID>\n");
@@ -84,14 +86,17 @@ static _Bool login(int sockfd){
 static _Bool cmd_parser(char *cmd){
     if(strstr(cmd, "lsgamers") || strstr(cmd, "lsgames") || strstr(cmd, "lsnoti") ||
         strstr(cmd, "exitgame") || strstr(cmd, "watchgame") || strstr(cmd, "invgamer") ||
-        strstr(cmd, "accept") || strstr(cmd, "reject") || strstr(cmd, "play"))
+        strstr(cmd, "accept") || strstr(cmd, "reject") || strstr(cmd, "play") ||
+        strstr(cmd, "logout"))
         return true;
 
     return false;
 }
 
 int main(int argc, char *argv[]){
-    int sfd = socket(AF_INET, SOCK_STREAM, 0);
+    int sfd;
+connect:
+    sfd = socket(AF_INET, SOCK_STREAM, 0);
     if(sfd == -1){
         perror("socket");
         exit(1);
@@ -162,6 +167,10 @@ again:
             recv(sfd, buf, BUF_SIZE, 0);
             if(strstr(buf, "exitg"))
                 goto end;
+            else if(strstr(buf, "logout")){
+                close(sfd);
+                goto connect;
+            }
             printf("%s", buf);
         }
     }
