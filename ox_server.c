@@ -135,10 +135,12 @@ fd_set wait_on_clients(SOCKET server) {
     return reads;
 }
 
+#define gamer_idx 1024
+#define game_idx 1024
 OXGamer *login_gamers[1024];
-size_t gamer_idx = 0;
-OXGame *running_games[512];
-size_t game_idx = 0;
+OXGame *running_games[1024];
+// size_t gamer_idx = 0;
+// size_t game_idx = 0;
 
 int main() {
 
@@ -646,7 +648,15 @@ _Bool req_parser(char *cmd, int initiator_fd){
 
 void add_gamer(char *name, int sockfd){
     OXGamer *new_gamer = create_oxgamer(name, sockfd);
-    login_gamers[gamer_idx++] = new_gamer;
+    OXGamer *slot;
+    for(int i = 0; i < gamer_idx; ++i){
+        slot = login_gamers[i];
+        if(!slot){
+            login_gamers[i] = new_gamer;
+            return;
+        }
+    }
+    // login_gamers[gamer_idx++] = new_gamer;
 }
 
 void del_gamer(int sockfd){
@@ -703,7 +713,15 @@ void del_invitation(int inv_fd, int sockfd){
 
 void add_game(int inv_fd, int accept_fd){
     OXGame *new_game = create_oxgame(inv_fd, accept_fd);
-    running_games[game_idx++] = new_game;
+    OXGame *slot;
+    for(int i = 0; i < game_idx; ++i){
+        slot = running_games[i];
+        if(!slot){
+            running_games[i] = new_game;
+            return;
+        }
+    }
+    // running_games[game_idx++] = new_game;
 }
 
 void del_game(OXGame *game){
@@ -712,11 +730,11 @@ void del_game(OXGame *game){
         oxgame = running_games[i];
         if(oxgame && (oxgame->id == game->id)){
             running_games[i] = NULL;
-            break;
+            free(oxgame);
+            return;
         }
     }
-    running_games[game_idx--];
-    free(game);
+    //running_games[game_idx--];
 }
 
 void draw_oxboard(int sockfd, int msg_cnt, ...){
