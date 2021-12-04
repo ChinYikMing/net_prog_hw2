@@ -352,6 +352,14 @@ _Bool req_parser(char *cmd, int initiator_fd){
             return true;
         }
 
+        // check the initiator if is in the game
+        OXGame *_game = get_game_by_sockfd(initiator_fd);
+        if(_game){
+            const char err_msg[] = "you need to leave or finish the current game first!\n";
+            send(initiator_fd, err_msg, strlen(err_msg), 0);
+            return true;
+        }
+
         game->watchers[game->watchers_idx++] = initiator_fd;
 
         // draw ox_board to initiator
@@ -492,6 +500,21 @@ _Bool req_parser(char *cmd, int initiator_fd){
         char *newline = strchr(ptr, '\n');
         snprintf(inv_fd_buf, newline - ptr + 1, "%s", ptr);
         int inv_fd = atoi(inv_fd_buf);
+
+        // check the initiator if is watching a game
+        OXGame *game;
+        for(int i = 0; i < game_idx; ++i){
+            game = running_games[i];
+            if(game){
+                for(int j = 0; j < game->watchers_idx; ++j){
+                    if(game->watchers[j] == initiator_fd){
+                        const char err_msg[] = "you need to leave watching the current game first!\n";
+                        send(initiator_fd, err_msg, strlen(err_msg), 0);
+                        return true;
+                    }
+                }
+            }
+        }
 
         OXNoti *noti = get_noti_by_sockfd(initiator_fd, inv_fd);
         if(noti){
