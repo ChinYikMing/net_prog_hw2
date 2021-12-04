@@ -18,5 +18,6 @@
 1. login and logout
 2. list all login gamers
 3. list all running games
-4. watch a specific running game
-5. invite and reject a specific gamer
+4. list all invitations
+5. watch a specific running game
+6. invite and reject a specific gamer
