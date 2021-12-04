@@ -397,6 +397,40 @@ _Bool req_parser(char *cmd, int initiator_fd){
         send(initiator_fd, "exitg", 5, 0);
 
         return false;
+    } else if((ptr = strstr(cmd, "leavegame"))){
+
+        // delete the game if the gamer is in the game, also the gamer then notify the peer
+        OXGame *game = get_game_by_sockfd(initiator_fd);
+        if(!game){
+            const char err_msg[] = "you are not in a game or watching a game!\n";
+            send(initiator_fd, err_msg, strlen(err_msg), 0);
+            return true;
+        }
+
+        int peer_fd;
+        if(game->gamer_fd[0] == initiator_fd)
+            peer_fd = game->gamer_fd[1];
+        else
+            peer_fd = game->gamer_fd[0];
+
+        send(peer_fd, "Peer has leave the game!\n", strlen("Peer has leave the game!\n"), 0);
+
+        if(game->watchers_idx > 0){
+            char leave_msg[128];
+            if(initiator_fd == game->gamer_fd[0])
+                strcpy(leave_msg, "'o' side has exit the game\n");
+            else
+                strcpy(leave_msg, "'x' side has exit the game\n");
+
+            for(int i = 0; i < game->watchers_idx; ++i)
+                send(game->watchers[i], leave_msg, strlen(leave_msg), 0);
+        }
+        del_game(game);
+
+        const char msg[] = "leave game successfully\n";
+        send(initiator_fd, msg, strlen(msg), 0);
+
+        return true;
     } else if((ptr = strstr(cmd, "logout"))){
 
         OXGame *game = get_game_by_sockfd(initiator_fd);

@@ -31,6 +31,8 @@ static void usage(){
     printf("lsnoti\n");
     printf("    -to show all notification\n");
     printf("exitgame\n");
+    printf("    -exit the game\n");
+    printf("leavegame\n");
     printf("    -leave the game\n");
     printf("logout\n");
     printf("    -logout current gamer\n");
@@ -87,7 +89,7 @@ static _Bool cmd_parser(char *cmd){
     if(strstr(cmd, "lsgamers") || strstr(cmd, "lsgames") || strstr(cmd, "lsnoti") ||
         strstr(cmd, "exitgame") || strstr(cmd, "watchgame") || strstr(cmd, "invgamer") ||
         strstr(cmd, "accept") || strstr(cmd, "reject") || strstr(cmd, "play") ||
-        strstr(cmd, "logout"))
+        strstr(cmd, "logout") || strstr(cmd, "leavegame"))
         return true;
 
     return false;
