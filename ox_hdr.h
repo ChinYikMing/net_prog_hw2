@@ -3,12 +3,6 @@ typedef struct ox_noti {
     int sockfd;
 } OXNoti;
 
-enum {
-    PLAYING,
-    FREE,
-    STATUS_CNT
-};
-
 typedef struct ox_game {
     int id;              // socket fd of the initiator
     char board[3][3];

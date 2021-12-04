@@ -23,7 +23,6 @@ OXGamer *create_oxgamer(char *name, int sockfd){
     OXGamer *gamer = malloc(sizeof(OXGamer));
     strcpy(gamer->name, name);
     gamer->sockfd = sockfd;
-    gamer->status = FREE;
     gamer->ox_noti_idx = 0;
 
     for(size_t i = 0; i < 64; ++i)
@@ -39,7 +38,6 @@ OXGame *create_oxgame(int sockfd1, int sockfd2){
             new_game->board[i][j] = ' ';
     new_game->id = sockfd1;
     new_game->turn = sockfd1;
-    new_game->status = PLAYING;
     new_game->left_step = 9;
     new_game->gamer_fd[0] = sockfd1;
     new_game->gamer_fd[1] = sockfd2;

@@ -398,12 +398,27 @@ _Bool req_parser(char *cmd, int initiator_fd){
 
         return false;
     } else if((ptr = strstr(cmd, "leavegame"))){
-
-        // delete the game if the gamer is in the game, also the gamer then notify the peer
+        // delete the game if the initiator is in the game
         OXGame *game = get_game_by_sockfd(initiator_fd);
         if(!game){
-            const char err_msg[] = "you are not in a game or watching a game!\n";
-            send(initiator_fd, err_msg, strlen(err_msg), 0);
+            // check the initiator if is watching a game
+            for(int i = 0; i < game_idx; ++i){
+                game = running_games[i];
+                if(game){
+                    for(int j = 0; j < game->watchers_idx; ++j){
+                        if(game->watchers[j] == initiator_fd){
+                            game->watchers[j] = -1;
+                            game->watchers_idx--;
+                            const char msg[] = "leave watching game successfully\n";
+                            send(initiator_fd, msg, strlen(msg), 0);
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            const char msg[] = "you are not playing or watching any game!\n";
+            send(initiator_fd, msg, strlen(msg), 0);
             return true;
         }
 
@@ -478,7 +493,7 @@ _Bool req_parser(char *cmd, int initiator_fd){
         OXGamer *gamer;
         for(size_t i = 0; i < gamer_idx; ++i){
             gamer = login_gamers[i];
-            if(gamer && gamer->status != PLAYING && gamer->sockfd == tgt_fd){
+            if(gamer && gamer->sockfd == tgt_fd){
                 // put invitation to inv_fd buffer
                 add_invitation(initiator_fd, tgt_fd);
 
@@ -555,6 +570,14 @@ _Bool req_parser(char *cmd, int initiator_fd){
                     }
                 }
             }
+        }
+
+        // check invite fd is in the game
+        game = get_game_by_sockfd(inv_fd);
+        if(game){
+            const char err_msg[] = "Peer is in a game!(Enter 'lsgames' and 'watchgame gameID' to watch the game)\n";
+            send(initiator_fd, err_msg, strlen(err_msg), 0);
+            return true;
         }
 
         OXNoti *noti = get_noti_by_sockfd(initiator_fd, inv_fd);
