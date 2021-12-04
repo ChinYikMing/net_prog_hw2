@@ -465,6 +465,13 @@ _Bool req_parser(char *cmd, int initiator_fd){
             return true;
         }
 
+        // check turn first before updating the oxboard's status
+        if(game->turn != initiator_fd){
+            const char err_msg[] = "Now is not your turn, please wait peer!\n";
+            send(initiator_fd, err_msg, strlen(err_msg), 0);
+            return true;
+        }
+
         ptr += 5;
         char action[8] = {0};
         char *newline = strchr(ptr, '\n');
