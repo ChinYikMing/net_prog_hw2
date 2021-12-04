@@ -426,6 +426,12 @@ _Bool req_parser(char *cmd, int initiator_fd){
         snprintf(tgt_fd_buf, newline - ptr + 1, "%s", ptr);
         int tgt_fd = atoi(tgt_fd_buf);
 
+        // cannot invite yourselves
+        if(tgt_fd == initiator_fd){
+            send(initiator_fd, "cannot invite yourselves\n", strlen("cannot invite yourselves\n"), 0);
+            return true;
+        }
+
         // check gamer status
         OXGamer *gamer;
         for(size_t i = 0; i < gamer_idx; ++i){
