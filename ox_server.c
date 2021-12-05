@@ -280,6 +280,7 @@ _Bool req_parser(char *cmd, int initiator_fd){
                 sprintf(id_buf, "%d", game->gamer_fd[0]);
                 strcat(buf, "@");
                 strcat(buf, id_buf);
+                strcat(buf, "('o')");
                 strcat(buf, " vs ");
                 free(gamer_name);
 
@@ -289,6 +290,7 @@ _Bool req_parser(char *cmd, int initiator_fd){
                 sprintf(id_buf, "%d", game->gamer_fd[1]);
                 strcat(buf, "@");
                 strcat(buf, id_buf);
+                strcat(buf, "('x')");
                 strcat(buf, " ");
                 free(gamer_name);
 
@@ -825,9 +827,11 @@ void draw_oxboard(int sockfd, int msg_cnt, ...){
     }
 
     if(oxgame->turn == oxgame->gamer_fd[0]){
+        strcat(turn_buf, "you are 'o'\n");
         send(oxgame->gamer_fd[0], turn_buf, strlen(turn_buf), 0);
         send(oxgame->gamer_fd[1], buf, strlen(buf), 0);
     } else {
+        strcat(turn_buf, "you are 'x'\n");
         send(oxgame->gamer_fd[1], turn_buf, strlen(turn_buf), 0);
         send(oxgame->gamer_fd[0], buf, strlen(buf), 0);
     }

@@ -44,6 +44,8 @@ static void usage(){
     printf("    -accept a specific gamer\n");
     printf("reject <gamer ID>\n");
     printf("    -reject a specific gamer\n");
+    printf("play <action(1 ... 9)>\n");
+    printf("    -to take an action in a game if available\n");
     printf("help\n");
     printf("    -to show these usage\n");
     printf("---------------------------------\n");
@@ -89,12 +91,22 @@ static _Bool login(int sockfd){
 }
 
 static _Bool cmd_parser(char *cmd){
-    if(strstr(cmd, "lsgamers") || strstr(cmd, "lsgames") || strstr(cmd, "lsnoti") ||
-        strstr(cmd, "exitgame") || strstr(cmd, "watchgame") || strstr(cmd, "invgamer") ||
-        strstr(cmd, "accept") || strstr(cmd, "reject") || strstr(cmd, "play") ||
+    if(strstr(cmd, "lsgamers") || strstr(cmd, "lsgames") || 
+        strstr(cmd, "lsnoti") || strstr(cmd, "exitgame") || 
         strstr(cmd, "logout") || strstr(cmd, "leavegame"))
         return true;
+    else if(strstr(cmd, "watchgame") || strstr(cmd, "invgamer") || 
+            strstr(cmd, "accept") || strstr(cmd, "reject") || 
+            strstr(cmd, "play")){
 
+            // these cmd must have a space
+            if(!strchr(cmd, ' '))
+                goto end;
+
+            return true;
+    }
+
+end:
     return false;
 }
 
