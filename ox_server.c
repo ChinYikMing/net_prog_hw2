@@ -559,13 +559,13 @@ _Bool req_parser(char *cmd, int initiator_fd){
         snprintf(inv_fd_buf, newline - ptr + 1, "%s", ptr);
         int inv_fd = atoi(inv_fd_buf);
 
-        // check the initiator if is watching a game
+        // check the initiator or invite fd if is watching a game
         OXGame *game;
         for(int i = 0; i < game_idx; ++i){
             game = running_games[i];
             if(game){
                 for(int j = 0; j < game->watchers_idx; ++j){
-                    if(game->watchers[j] == initiator_fd){
+                    if(game->watchers[j] == initiator_fd || game->watchers[j] == inv_fd){
                         const char err_msg[] = "you need to leave watching the current game first!\n";
                         send(initiator_fd, err_msg, strlen(err_msg), 0);
                         return true;
@@ -574,10 +574,18 @@ _Bool req_parser(char *cmd, int initiator_fd){
             }
         }
 
-        // check invite fd is in the game
+        // check invite fd is playing game
         game = get_game_by_sockfd(inv_fd);
         if(game){
             const char err_msg[] = "Peer is in a game!(Enter 'lsgames' and 'watchgame gameID' to watch the game)\n";
+            send(initiator_fd, err_msg, strlen(err_msg), 0);
+            return true;
+        }
+
+        // check initiator fd if is playing game
+        game = get_game_by_sockfd(initiator_fd);
+        if(game){
+            const char err_msg[] = "You are in a game!(accept only available if finish the game or leave the game)\n";
             send(initiator_fd, err_msg, strlen(err_msg), 0);
             return true;
         }
@@ -616,6 +624,25 @@ _Bool req_parser(char *cmd, int initiator_fd){
         char *space = strchr(ptr, ' ');
         memcpy(rec, ptr, space - ptr);
 
+        char name[11] = {0};
+        ptr = rec;
+        char *colon = strchr(ptr, ':');
+        memcpy(name, ptr, colon - ptr);
+
+        // check if the gamer has login before
+        OXGamer *gamer;
+        for(size_t i = 0; i < gamer_idx; ++i){
+            gamer = login_gamers[i];
+            if(gamer && strcmp(gamer->name, name) == 0){
+                printf("name: %s\n", name);
+                printf("gamer_name: %s\n", gamer->name);
+                // gamer has login before and reject the login request
+                const char err_msg[] = "The gamer has login before!\n";
+                send(initiator_fd, err_msg, strlen(err_msg), 0);
+                return true;
+            }
+        }
+
         char db_rec[32];
         size_t db_rec_len;
         FILE *shadow_fptr = fopen("./shadow", "r");
@@ -627,15 +654,7 @@ _Bool req_parser(char *cmd, int initiator_fd){
             if(strcmp(db_rec, rec) == 0){
                 fclose(shadow_fptr);
                 send(initiator_fd, "success", 7, 0);
-
-                // record the login gamer
-                char name[11] = {0};
-                ptr = rec;
-                char *colon = strchr(ptr, ':');
-                memcpy(name, ptr, colon - ptr);
-
                 add_gamer(name, initiator_fd);
-
                 return true;
             }
         }

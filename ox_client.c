@@ -51,11 +51,11 @@ static void usage(){
 }
 
 static _Bool login(int sockfd){
-    char buf[BUF_SIZE];
-    char login_req[128];
-    char username[32];
-    char pwd[32];
-    char rec[32];
+    char buf[BUF_SIZE] = {0};
+    char login_req[128] = {0};
+    char username[32] = {0};
+    char pwd[32] = {0};
+    char rec[32] = {0};
 
     printf("Enter username: ");
     fgets(username, 32, stdin);
@@ -79,6 +79,9 @@ static _Bool login(int sockfd){
     recv(sockfd, buf, BUF_SIZE, 0);
     if(strstr(buf, "failure")){
         printf("invalid username or password, please try again\n");
+        return false;
+    } else if(strstr(buf, "before")){
+        printf("%s", buf);
         return false;
     }
 
