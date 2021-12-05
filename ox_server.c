@@ -412,7 +412,7 @@ _Bool req_parser(char *cmd, int initiator_fd){
                     for(int j = 0; j < game->watchers_idx; ++j){
                         if(game->watchers[j] == initiator_fd){
                             game->watchers[j] = -1;
-                            game->watchers_idx--;
+                            // game->watchers_idx--;
                             const char msg[] = "leave watching game successfully\n";
                             send(initiator_fd, msg, strlen(msg), 0);
                             return true;
